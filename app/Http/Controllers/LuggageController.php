@@ -2,47 +2,59 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Luggage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Validator;
 
 class LuggageController extends Controller
 {
     public function scanLuggage(Request $request)
     {
-        return [
-            "success" => true,
-            "data" => "hello world!"
-        ];
         $validator = Validator::make($request->all(), [
-            'luggage_id' => 'required|string',
-            'timestamp' => 'required|string'
+            'luggage_id' => 'required|string'
         ]);
-
+        date_default_timezone_set('Asia/Kolkata');
+        Config::set('app.timezone', 'Asia/Kolkata');
         if ($validator->fails()) {
             return [
                 "success" => false,
-                "message" => "Validation error",
-                "data" => $validator->errors()->all()
+                "message" => "Validation error"
             ];
         }
 
         $validated = $validator->validated();
 
-        $luggage = DB::table('Luggage')->find($validated['luggage_id']);
+        $luggage = Luggage::find($validated['luggage_id']);
 
         if (!$luggage) {
             return [
                 'success' => false,
-                'message' => 'Luggage not found',
-                'data' => []
+                'message' => 'Invalid QR code'
             ];
         }
-
-        return [
-            "success" => true,
-            "message" => "Data fetched successfully",
-            "data" => $luggage
+        if ($luggage->total_scans == 4) {
+            return [
+                'success' => false,
+                'message' => 'Luggage already scanned 4 times'
+            ];
+        }
+        $scans = $luggage->scans;
+        $key = "scan" . ($luggage->total_scans + 1);
+        $scans[$key] = [
+            'is_scanned' => true,
+            'timestamp' => Carbon::now()->toDateTimeString()
         ];
+        $luggage->scans = $scans;
+        $luggage->total_scans = $luggage->total_scans + 1;
+        $saved = $luggage->save();
+        if ($saved) {
+            return [
+                "success" => true,
+                "message" => "Luggage Scanned Successfully"
+            ];
+        }
     }
 }
