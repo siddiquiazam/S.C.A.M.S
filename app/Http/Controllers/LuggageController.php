@@ -49,11 +49,18 @@ class LuggageController extends Controller
         ];
         $luggage->scans = $scans;
         $luggage->total_scans = $luggage->total_scans + 1;
+        $id = $luggage->_id;
+        $name = $luggage->owner;
+        $weight = $luggage->weight;
         $saved = $luggage->save();
         if ($saved) {
             return [
                 "success" => true,
-                "message" => "Luggage Scanned Successfully"
+                "message" => "Passanger: $name. Weight: $weight kg. $key completed.",
+                "data" => [
+                    "id" => $id,
+                    "total_scans" => $luggage->total_scans
+                ]
             ];
         }
     }
